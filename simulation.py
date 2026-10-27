@@ -1,11 +1,11 @@
 # %% [markdown]
-# Chapter 9.2：Robust design 的 Python 逐步實作
+# Robust model calibration: Chapter 9.2 example and simulation extension
 #
-# 只需要 numpy 與 matplotlib。每個 `# %%` 是一個可單獨執行的 cell。
-# 模型採用書中的式 (9.12)：
+# Requires NumPy and Matplotlib. Run the cells in order.
+# Calibration model, Eq. (9.12):
 #     h(x; eta) = eta_0 + exp(-eta_1*x_1) + exp(-eta_2*x_2)
 
-# %% Step 0：載入工具並固定亂數
+# %% Step 0: Setup
 from pathlib import Path
 
 
@@ -19,7 +19,7 @@ OUT = Path("results")
 OUT.mkdir(parents=True, exist_ok=True)
 
 
-# %% Step 1：建立書中的 computer model
+# %% Step 1: Calibration model and local design
 def h(x, eta):
     """Equation (9.12). x shape=(n,2), eta=(eta0,eta1,eta2)."""
     x = np.asarray(x, dtype=float)
@@ -53,19 +53,19 @@ print("Local D-optimal design (4 locations, each replicated twice):")
 print(design_local)
 
 
-# %% Step 2：用 distributions 表達 parameter uncertainty
-# 書中 Section 9.2.1 的設定：
+# %% Step 2: Sample parameter uncertainty
+# Parameter distributions from Section 9.2.1:
 # eta_1 ~ Uniform(1,3), eta_2 ~ Normal(2, 0.5^2)
 N_PARAMETER_SAMPLES = 500
 eta1_samples = rng.uniform(1.0, 3.0, N_PARAMETER_SAMPLES)
 eta2_samples = rng.normal(2.0, 0.5, N_PARAMETER_SAMPLES)
 
-# Normal distribution 極少數可能小於 0；重新抽樣以符合 decay parameter > 0。
+# Resample nonpositive decay parameters.
 while np.any(eta2_samples <= 0):
     bad = eta2_samples <= 0
     eta2_samples[bad] = rng.normal(2.0, 0.5, bad.sum())
 
-# 每一組 eta 都產生四個 locally D-optimal points。
+# Pool four local design points for each parameter draw.
 local_pool = np.vstack(
     [local_d_design([0.0, e1, e2]) for e1, e2 in zip(eta1_samples, eta2_samples)]
 )
@@ -75,7 +75,7 @@ print("Number of parameter samples:", N_PARAMETER_SAMPLES)
 print("Number of pooled local-design points:", len(local_pool))
 
 
-# %% Step 3：用式 (5.17) 求 importance support points
+# %% Step 3: Importance support points, Eq. (5.17)
 def isp_objective_and_gradient(design, pool, weights):
     """Objective and gradient of equation (5.17)."""
     n = len(design)
@@ -152,7 +152,7 @@ print("Eight parameter-robust points:")
 print(np.round(design_parameter, 4))
 
 
-# %% Step 4：依式 (4.27) 加入 sequential MaxPro points
+# %% Step 4: Sequential MaxPro augmentation, Eq. (4.27)
 def logsumexp(values, axis=1):
     vmax = np.max(values, axis=axis, keepdims=True)
     return np.squeeze(vmax, axis=axis) + np.log(
@@ -182,7 +182,7 @@ print("Combined robust design:")
 print(np.round(design_combined, 4))
 
 
-# %% Step 5：畫出三種 design
+# %% Step 5: Plot the designs
 fig, axes = plt.subplots(1, 3, figsize=(12, 4), constrained_layout=True)
 
 axes[0].scatter(design_local[:, 0], design_local[:, 1], s=55)
@@ -221,7 +221,7 @@ else:
     plt.close(fig)
 
 
-# %% Step 6：建立含有 model discrepancy 的 physical system
+# %% Step 6: Simulated physical response
 eta_true = np.array([0.30, 2.70, 1.40])
 sigma_noise = 0.03
 
@@ -238,7 +238,7 @@ def physical_mean(x):
     return h(x, eta_true) + discrepancy(x)
 
 
-# %% Step 7：第一階段——用 Gauss–Newton 估計 calibration parameters
+# %% Step 7: Estimate calibration parameters
 def fit_eta_gauss_newton(x, y, initial=eta_nominal, max_iter=100):
     eta = np.asarray(initial, dtype=float).copy()
     lower = np.array([-1.0, 0.2, 0.2])
@@ -269,7 +269,7 @@ def fit_eta_gauss_newton(x, y, initial=eta_nominal, max_iter=100):
     return eta
 
 
-# %% Step 8：第二階段——用 zero-mean GP 擬合 residuals
+# %% Step 8: Fit a GP to the residuals
 def fit_residual_gp(x, residual, noise_sd):
     """Small grid search for GP length scales and process standard deviation."""
     ell_grid = np.geomspace(0.15, 2.0, 12)
@@ -333,7 +333,7 @@ fits = {
 }
 
 
-# %% Step 9：比較 prediction RMSE
+# %% Step 9: Evaluate predictions
 axis = np.linspace(0.0, 1.0, 61)
 x1_grid, x2_grid = np.meshgrid(axis, axis, indexing="xy")
 test_grid = np.column_stack([x1_grid.ravel(), x2_grid.ravel()])
@@ -361,7 +361,7 @@ for row in rows:
           f" {row[4]:16.3f} {row[5]:8.3f}")
 
 
-# %% Step 10：畫出 true surface 與三種 predictions
+# %% Step 10: Compare response surfaces
 all_values = np.concatenate([truth, *predictions.values()])
 vmin, vmax = all_values.min(), all_values.max()
 fig, axes = plt.subplots(2, 2, figsize=(9, 8), constrained_layout=True)
@@ -391,7 +391,7 @@ else:
     plt.close(fig)
 
 
-# %% Step 11：儲存 design points 與 summary
+# %% Step 11: Save results
 with (OUT / "design_points.csv").open("w", encoding="utf-8") as file:
     file.write("design,role,run,x1,x2\n")
     for name, design in designs.items():
