@@ -1,0 +1,25 @@
+design,role,run,x1,x2
+Local,local,1,0.0000000000,0.0000000000
+Local,local,2,0.0000000000,0.0000000000
+Local,local,3,0.5000000000,0.0000000000
+Local,local,4,0.5000000000,0.0000000000
+Local,local,5,0.0000000000,0.5000000000
+Local,local,6,0.0000000000,0.5000000000
+Local,local,7,0.5000000000,0.5000000000
+Local,local,8,0.5000000000,0.5000000000
+Parameter robust,parameter,1,0.0000000000,0.0000000000
+Parameter robust,parameter,2,0.0000000000,0.0000000000
+Parameter robust,parameter,3,0.0000000000,0.4368751610
+Parameter robust,parameter,4,0.0000000000,0.6260577538
+Parameter robust,parameter,5,0.3943374880,0.0000936992
+Parameter robust,parameter,6,0.4031070219,0.5251088821
+Parameter robust,parameter,7,0.6415574243,0.0000000000
+Parameter robust,parameter,8,0.7684223809,0.5179767488
+Combined robust,parameter,1,0.0000000000,0.0000000000
+Combined robust,parameter,2,0.0000000000,0.5100124033
+Combined robust,parameter,3,0.4877027828,0.0000000000
+Combined robust,parameter,4,0.5569700846,0.5414454263
+Combined robust,space_filling,5,0.9985741109,0.9982235648
+Combined robust,space_filling,6,0.2505714822,0.8622539134
+Combined robust,space_filling,7,0.8664703522,0.2366814464
+Combined robust,space_filling,8,0.7549975954,0.7487038514
